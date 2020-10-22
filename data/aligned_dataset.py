@@ -78,7 +78,7 @@ class AlignedDataset(BaseDataset):
                     'A_paths': AB_path, 'B_paths': AB_path}
 
         else:
-                     AB_path = self.AB_paths[index]
+            AB_path = self.AB_paths[index]
             file_name = [os.path.basename(AB_path)]
 
             # TODO: add edge detection algorithm on the fly
