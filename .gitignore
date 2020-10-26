@@ -1,0 +1,17 @@
+checkpoints/alps_seasons.zip
+checkpoints/face_progressive_64.zip
+checkpoints/shoes_and_handbags_progressive_64.zip
+
+# images
+*.png
+*.jpg
+*.jpeg
+
+*.pth
+*.html
+*.pyc
+*.cpython-36.pyc
+*.json
+
+checkpoints/
+results/

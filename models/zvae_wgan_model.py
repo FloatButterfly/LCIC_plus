@@ -150,6 +150,7 @@ class zVaeWGANModel(BaseModel):
             # print(z0)
             # return self.z_encoded, self.real_A, self.fake_B, self.real_B, self.logvar
 
+    # for zvae-wgan
     def test_encode(self, z0=None, encode=False, qp=-1, z_log_dir=None):
         with torch.no_grad():
             if encode:  # use encoded z
@@ -184,7 +185,8 @@ class zVaeWGANModel(BaseModel):
 
             z0 = z0.to(self.device)
             self.fake_B = self.netG(self.real_A, z0)
-            print(z0)
+            print("z0 used here is {}".format(z0))
+            
             # return self.z_encoded, self.real_A, self.fake_B, self.real_B, self.logvar
             return self.real_A, self.fake_B, self.real_B
 

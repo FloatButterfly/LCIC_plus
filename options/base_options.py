@@ -37,7 +37,7 @@ class BaseOptions():
         parser.add_argument('--direction', type=str, default='AtoB', help='AtoB or BtoA')
         parser.add_argument('--epoch', type=str, default='latest',
                             help='which epoch to load? set to latest to use latest cached model')
-        parser.add_argument('--num_threads', default=4, type=int, help='# sthreads for loading data')
+        parser.add_argument('--num_threads', default=1, type=int, help='# sthreads for loading data')
         parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
         parser.add_argument('--serial_batches', action='store_true',
                             help='if true, takes images in order to make batches, otherwise takes them randomly')
@@ -74,6 +74,10 @@ class BaseOptions():
         # for semantic map
         parser.add_argument('--label_nc', type=int, default=182,
                             help='# of input label classes without unknown class. If you have unknown class as class label, specify --contain_dontcare_label.')  # coco 182; ADE20K 150
+
+        # for edge detection (DexiNet)
+        parser.add_argument('--DexiNet_cp', type=str, default='/media/sdc/yuefeng/programs/edge_detection/DexiNed/DexiNed_Pytorch/checkpoints/24/24_model.pth',
+                            help='checkpoint path for edge detection network (DexiNed).')
 
         # train options
         parser.add_argument('--display_id', type=int, default=1, help='window id of the web display')

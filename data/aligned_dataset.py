@@ -24,8 +24,7 @@ class AlignedDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.root = opt.dataroot
-        # self.dir_AB = os.path.join(opt.dataroot, opt.phase)
-        self.dir_AB = "/backup1/home/zhangyuefeng/programs/test"
+        self.dir_AB = os.path.join(opt.dataroot, opt.phase)
         self.AB_paths = sorted(make_dataset(self.dir_AB))
         assert (opt.resize_or_crop == 'resize_and_crop')
             
@@ -48,7 +47,6 @@ class AlignedDataset(BaseDataset):
             A = A[:, h_offset:h_offset + self.opt.fineSize, w_offset:w_offset + self.opt.fineSize]
             B = B[:, h_offset:h_offset + self.opt.fineSize, w_offset:w_offset + self.opt.fineSize]
         
-            # TODO: why (0.5, 0.5, 0.5) here? mean?
             A = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(A)
             B = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(B)
 
@@ -73,7 +71,7 @@ class AlignedDataset(BaseDataset):
             if output_nc == 1:  # RGB to gray
                 tmp = B[0, ...] * 0.299 + B[1, ...] * 0.587 + B[2, ...] * 0.114
                 B = tmp.unsqueeze(0)
-
+            
             return {'A': A, 'B': B,
                     'A_paths': AB_path, 'B_paths': AB_path}
 
@@ -82,13 +80,19 @@ class AlignedDataset(BaseDataset):
             file_name = [os.path.basename(AB_path)]
 
             # TODO: add edge detection algorithm on the fly
-            # A = Image.open(AB_path).convert('RGB')
-            A = cv2.imread(AB_path, cv2.IMREAD_COLOR)
-            checkpoint_path = "/backup1/home/zhangyuefeng/programs/edge_detection/DexiNed/DexiNed_Pytorch/checkpoints/24/24_model.pth"
+            # A: edge image, B: RGB groudtruth
+            B = cv2.imread(AB_path, cv2.IMREAD_COLOR)
+            B = cv2.resize(B, (self.opt.loadSize, self.opt.loadSize), interpolation=cv2.INTER_CUBIC)
+            h_offset = random.randint(0, max(0, self.opt.loadSize - self.opt.fineSize - 1))
+            w_offset = random.randint(0, max(0, self.opt.loadSize - self.opt.fineSize - 1))
+            B = B[h_offset:h_offset + self.opt.fineSize, w_offset:w_offset + self.opt.fineSize]
+
+            # use DexiNet to extract edge feature
+            checkpoint_path = self.opt.DexiNet_cp
             if not os.path.isfile(checkpoint_path):
                 raise FileNotFoundError(
                     f"Checkpoint filte note found: {checkpoint_path}")
-            print(f"Restoring weights from: {checkpoint_path}")
+            print(f"Restoring DexiNed weights from: {checkpoint_path}")
 
             device = torch.device('cuda' if len(self.opt.gpu_ids) > 0 else 'cpu')
             edge_model = DexiNet().to(device)
@@ -98,32 +102,41 @@ class AlignedDataset(BaseDataset):
             edge_model.eval()
 
             # image preprocess: size transforms
-            A_shape = [A.shape[0], A.shape[1]]
-            if A.shape[0] < 512 or A.shape[1] < 512:
-                A = cv2.resize(A, (512, 512))
-                print("actual size: {}, target size: {}".format(A_shape, (512, 512)))
-            elif A.shape[0] % 16 != 0 or A.shape[1] % 16 != 0:
-                A_height = ((A.shape[0] // 16) + 1) * 16 if A_shape[0] % 16 != 0 else A.shape[0]
-                A_width = ((A.shape[1] // 16) + 1) * 16 if A_shape[1] % 16 != 0 else A.shape[1]
-                A = cv2.resize(A, (A_width, A_height))
-                print("actual size: {}, target size: {}".format(A_shape, (A_width, A_height)))
+            B_shape = [B.shape[0], B.shape[1]]
+            # if B.shape[0] < 512 or B.shape[1] < 512:
+            #     B = cv2.resize(B, (512, 512))
+            #     print("actual size: {}, target size: {}".format(B_shape, (512, 512)))
+            # elif B.shape[0] % 16 != 0 or B.shape[1] % 16 != 0:
+            #     B_height = ((B.shape[0] // 16) + 1) * 16 if B_shape[0] % 16 != 0 else B.shape[0]
+            #     B_width = ((B.shape[1] // 16) + 1) * 16 if B_shape[1] % 16 != 0 else B.shape[1]
+            #     B = cv2.resize(B, (B_width, B_height))
+            #     print("actual size: {}, target size: {}".format(B_shape, (B_width, B_height)))
             
             mean_pixel_values = [103.939,116.779,123.68]
             print("mean pixel values: {}".format(mean_pixel_values))
 
-            A = np.array(A, dtype=np.float32)
-            A -= mean_pixel_values
-            A = A.transpose((2,0,1))
-            A = torch.from_numpy(A.copy()).float()
+            B_input = np.array(B, dtype=np.float32)
+            B_input -= mean_pixel_values
+            B_input = B_input.transpose((2,0,1))        # RGB
+            B_input = torch.from_numpy(B_input.copy()).float()
 
             with torch.no_grad():
-                # A = transforms.ToTensor()(A)
-                A = A.to(device)
-                output = edge_model(torch.unsqueeze(A, dim=0))
-            pdb.set_trace()
-            fuse, _ = self._save_output(output, file_name, A_shape, save=True)
+                # B = transforms.ToTensor()(B)
+                B_input = B_input.to(device)
+                B_output = edge_model(torch.unsqueeze(B_input, dim=0))
 
-            A = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(A) 
+            fuse, _ = self._save_output(B_output, file_name, B_shape, save=True)
+            print("fuse shape: {}".format(fuse.shape))
+
+            A = torch.from_numpy(fuse.copy()).float().to(device)
+            A = torch.unsqueeze(A, dim=0)
+            A = torch.cat([A, torch.zeros(2, A.shape[1], A.shape[2]).to(device)], dim=0)
+            # A = A.repeat(3, 1, 1)
+            B = B[...,::-1]         # to RGB
+            B = torch.from_numpy(B.copy()).float().to(device)
+            print("A shape: {}".format(A.shape))
+            print("B shape: {}".format(B.shape))
+            A = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(A)
             B = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(B)
 
             if self.opt.direction == 'BtoA':
@@ -148,7 +161,7 @@ class AlignedDataset(BaseDataset):
                 tmp = B[0, ...] * 0.299 + B[1, ...] * 0.587 + B[2, ...] * 0.114
                 B = tmp.unsqueeze(0)
             
-            return {'A': A, 'B': B}
+            return {'A': A, 'B': B, 'A_paths': "", "B_paths": ""}
             # return {'A': A, 'B': B,
             #         'A_paths': AB_path, 'B_paths': AB_path}
 
@@ -159,7 +172,9 @@ class AlignedDataset(BaseDataset):
     def name(self):
         return 'AlignedDataset'
 
-    def _save_output(self, tensor, file_names, img_shape=None, output_dir=".", save=False):
+    def _save_output(self, tensor, file_names, img_shape=None, save=False):
+        output_dir = os.path.join(self.opt.results_dir, 'edge_maps')
+        
         # 255.0 * (1.0 - em_a)
         edge_maps = []
         for i in tensor:
@@ -173,7 +188,6 @@ class AlignedDataset(BaseDataset):
         image_shape =[[y, x] for x, y in zip(image_shape[0], image_shape[1])]
         print("image_shape:{}".format(image_shape))
         
-        pdb.set_trace()
         idx = 0
         for i_shape, file_name in zip(image_shape, file_names):
             tmp = tensor[:, idx, ...]
@@ -201,11 +215,16 @@ class AlignedDataset(BaseDataset):
             average = np.uint8(np.mean(average, axis=0))
 
             if save:
-                cv2.imwrite(os.path.join(output_dir, "fuse_" + file_name), fuse)
-                cv2.imwrite(os.path.join(output_dir, "avg_" + file_name), average)
+                fuse_dir = os.path.join(output_dir, 'fuse')
+                cv2.imwrite(os.path.join(fuse_dir, "fuse_" + file_name), fuse)
+                avg_dir = os.path.join(output_dir, 'average')
+                cv2.imwrite(os.path.join(avg_dir, "avg_" + file_name), average)
             
             idx += 1
 
+        # return rgb image
+        fuse = fuse[...,::-1]
+        average = average[...,::-1]
         return fuse, average
 
 
