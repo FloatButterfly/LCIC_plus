@@ -76,7 +76,7 @@ class BaseOptions():
                             help='# of input label classes without unknown class. If you have unknown class as class label, specify --contain_dontcare_label.')  # coco 182; ADE20K 150
 
         # for edge detection (DexiNet)
-        parser.add_argument('--DexiNet_cp', type=str, default='/media/sdc/yuefeng/programs/edge_detection/DexiNed/DexiNed_Pytorch/checkpoints/24/24_model.pth',
+        parser.add_argument('--DexiNet_cp', type=str, default='../edge_detection/DexiNed/DexiNed_Pytorch/checkpoints/24/24_model.pth',
                             help='checkpoint path for edge detection network (DexiNed).')
 
         # train options

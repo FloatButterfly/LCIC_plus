@@ -1,4 +1,5 @@
 import os.path
+import os
 import random
 
 import torch
@@ -27,7 +28,7 @@ class AlignedDataset(BaseDataset):
         self.dir_AB = os.path.join(opt.dataroot, opt.phase)
         self.AB_paths = sorted(make_dataset(self.dir_AB))
         assert (opt.resize_or_crop == 'resize_and_crop')
-            
+
     def __getitem__(self, index):
         # use combined input (RGB image and its corresponding edge image)
         use_combined = False
@@ -47,6 +48,9 @@ class AlignedDataset(BaseDataset):
             A = A[:, h_offset:h_offset + self.opt.fineSize, w_offset:w_offset + self.opt.fineSize]
             B = B[:, h_offset:h_offset + self.opt.fineSize, w_offset:w_offset + self.opt.fineSize]
         
+            print("A shape before norm: {}".format(A.shape))
+            print("B shape before norm: {}".format(B.shape))
+
             A = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(A)
             B = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(B)
 
@@ -72,6 +76,9 @@ class AlignedDataset(BaseDataset):
                 tmp = B[0, ...] * 0.299 + B[1, ...] * 0.587 + B[2, ...] * 0.114
                 B = tmp.unsqueeze(0)
             
+            print("A shape final:", A.shape)
+            print("B shape final:", B.shape)
+
             return {'A': A, 'B': B,
                     'A_paths': AB_path, 'B_paths': AB_path}
 
@@ -79,9 +86,8 @@ class AlignedDataset(BaseDataset):
             AB_path = self.AB_paths[index]
             file_name = [os.path.basename(AB_path)]
 
-            # TODO: add edge detection algorithm on the fly
             # A: edge image, B: RGB groudtruth
-            B = cv2.imread(AB_path, cv2.IMREAD_COLOR)
+            B = cv2.imread(AB_path, cv2.IMREAD_COLOR)       # BGR
             B = cv2.resize(B, (self.opt.loadSize, self.opt.loadSize), interpolation=cv2.INTER_CUBIC)
             h_offset = random.randint(0, max(0, self.opt.loadSize - self.opt.fineSize - 1))
             w_offset = random.randint(0, max(0, self.opt.loadSize - self.opt.fineSize - 1))
@@ -100,7 +106,7 @@ class AlignedDataset(BaseDataset):
             edge_model.load_state_dict(torch.load(checkpoint_path,
                                             map_location=device))
             edge_model.eval()
-
+            
             # image preprocess: size transforms
             B_shape = [B.shape[0], B.shape[1]]
             # if B.shape[0] < 512 or B.shape[1] < 512:
@@ -115,29 +121,31 @@ class AlignedDataset(BaseDataset):
             mean_pixel_values = [103.939,116.779,123.68]
             print("mean pixel values: {}".format(mean_pixel_values))
 
-            B_input = np.array(B, dtype=np.float32)
+            B_input = np.array(B, dtype=np.float32).copy()
             B_input -= mean_pixel_values
             B_input = B_input.transpose((2,0,1))        # RGB
             B_input = torch.from_numpy(B_input.copy()).float()
 
             with torch.no_grad():
-                # B = transforms.ToTensor()(B)
                 B_input = B_input.to(device)
                 B_output = edge_model(torch.unsqueeze(B_input, dim=0))
 
             fuse, _ = self._save_output(B_output, file_name, B_shape, save=True)
-            print("fuse shape: {}".format(fuse.shape))
+            A = transforms.ToTensor()(fuse.copy()).to(device)
+            
+            B = B[:, :, [2, 1, 0]]          # to RGB
+            B = transforms.ToTensor()(B).to(device)
 
-            A = torch.from_numpy(fuse.copy()).float().to(device)
-            A = torch.unsqueeze(A, dim=0)
-            A = torch.cat([A, torch.zeros(2, A.shape[1], A.shape[2]).to(device)], dim=0)
-            # A = A.repeat(3, 1, 1)
-            B = B[...,::-1]         # to RGB
-            B = torch.from_numpy(B.copy()).float().to(device)
             print("A shape: {}".format(A.shape))
             print("B shape: {}".format(B.shape))
+
             A = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(A)
             B = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(B)
+
+            # im1 = transforms.ToPILImage()(B.cpu()).convert("RGB")
+            # im1.save("out_B.jpg")
+            # im2 = transforms.ToPILImage()(A.cpu()).convert("RGB")
+            # im2.save("out_A.jpg")
 
             if self.opt.direction == 'BtoA':
                 input_nc = self.opt.output_nc
@@ -162,8 +170,6 @@ class AlignedDataset(BaseDataset):
                 B = tmp.unsqueeze(0)
             
             return {'A': A, 'B': B, 'A_paths': "", "B_paths": ""}
-            # return {'A': A, 'B': B,
-            #         'A_paths': AB_path, 'B_paths': AB_path}
 
 
     def __len__(self):
@@ -213,18 +219,32 @@ class AlignedDataset(BaseDataset):
             # Get the mean prediction of all the 7 outputs  
             average = np.array(preds, dtype=np.float32)
             average = np.uint8(np.mean(average, axis=0))
-
+            
+            print("average shape:", average.shape)
             if save:
                 fuse_dir = os.path.join(output_dir, 'fuse')
+                if not os.path.exists(fuse_dir):
+                    os.makedirs(fuse_dir)
                 cv2.imwrite(os.path.join(fuse_dir, "fuse_" + file_name), fuse)
+                print("save fused image at: ", os.path.join(fuse_dir, "fuse_" + file_name))
+
                 avg_dir = os.path.join(output_dir, 'average')
+                if not os.path.exists(avg_dir):
+                    os.makedirs(avg_dir)
                 cv2.imwrite(os.path.join(avg_dir, "avg_" + file_name), average)
-            
+                print("save average image at: ", os.path.join(avg_dir, "avg_" + file_name))
+
             idx += 1
 
         # return rgb image
+        fuse = np.tile(fuse[..., np.newaxis], (1, 1, 3))
         fuse = fuse[...,::-1]
+        average = np.tile(average[..., np.newaxis], (1, 1, 3))
         average = average[...,::-1]
+
+        # print("here fuse shape:", fuse.shape)
+        # print("here average shape:", average.shape)
+
         return fuse, average
 
 

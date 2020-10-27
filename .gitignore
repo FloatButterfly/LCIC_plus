@@ -15,3 +15,6 @@ checkpoints/shoes_and_handbags_progressive_64.zip
 
 checkpoints/
 results/
+
+# vs code
+*.code-workspace

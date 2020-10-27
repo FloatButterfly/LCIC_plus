@@ -57,5 +57,8 @@ if __name__ == '__main__':
         img_path = 'input_%3.3d' % i
         save_images(webpage, images, names, img_path, aspect_ratio=opt.aspect_ratio, width=opt.fineSize)
 
+        if i + 1 == opt.num_test:
+            break
+
     webpage.save()
 
