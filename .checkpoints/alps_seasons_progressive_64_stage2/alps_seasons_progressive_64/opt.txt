@@ -1,24 +1,25 @@
 ----------------- Options ---------------
+               DexiNet_cp: /media/sdc/yuefeng/programs/edge_detection/DexiNed/DexiNed_Pytorch/checkpoints/24/24_model.pth
              aspect_ratio: 1.0                           
-               batch_size: 1                             
+               batch_size: 4                             	[default: 1]
                     beta1: 0.0                           
                     beta2: 0.9                           
               center_crop: False                         
-          checkpoints_dir: ./checkpoints                 
-            conditional_D: False                         
-           continue_train: False                         
-                 dataroot: /backup1/home/zhangyuefeng/programs/test	[default: None]
+          checkpoints_dir: .checkpoints/alps_seasons_progressive_64_stage2	[default: ./checkpoints]
+            conditional_D: True                          	[default: False]
+           continue_train: True                          	[default: False]
+                 dataroot: /media/sdc/yuefeng/dataset/seasons/	[default: None]
              dataset_mode: aligned                       
                 direction: AtoB                          
-               display_id: 1                             
+               display_id: 10                            	[default: 1]
                     epoch: latest                        
               epoch_count: 1                             
                  fineSize: 256                           
                g_input_nc: 1                             
-                 gan_mode: lsgan                         
+                 gan_mode: ls                            	[default: lsgan]
                   gpu_ids: 0                             
                 init_type: xavier                        
-                 input_nc: 3                             
+                 input_nc: 1                             	[default: 3]
                   isTrain: False                         	[default: None]
                  label_nc: 182                           
                lambda_GAN: 1.0                           
@@ -28,11 +29,11 @@
               lambda_ssim: 0.25                          
                  lambda_z: 1                             
                  loadSize: 256                           
-                       lr: 0.0002                        
+                       lr: 5e-05                         	[default: 0.0002]
          max_dataset_size: 9223372036854775807           
                     model: zvae_wgan                     	[default: bicycle_gan]
                 n_samples: 5                             
-                     name:                               
+                     name: alps_seasons_progressive_64   	[default: ]
                       ndf: 64                            
                       nef: 64                            
                      netD: basic_256_multi               
@@ -40,8 +41,8 @@
                      netE: resnet_256                    
                      netG: progressive_256               
                       ngf: 64                            
-                    niter: 100                           
-              niter_decay: 100                           
+                    niter: 60                            	[default: 100]
+              niter_decay: 60                            	[default: 100]
                        nl: relu                          
                   no_TTUR: False                         
                 no_encode: False                         
@@ -50,9 +51,9 @@
                    num_Ds: 2                             
                  num_test: 50                            
               num_threads: 1                             
-                       nz: 8                             
+                       nz: 64                            	[default: 8]
                 output_nc: 3                             
-                    phase: test                          
+                    phase: train                         	[default: test]
                        qp: 0                             
            resize_or_crop: resize_and_crop               
               results_dir: ../results/                   
@@ -67,7 +68,7 @@
                   use_res: False                         
                use_same_D: False                         
                   verbose: False                         
-                  vggLoss: False                         
+                  vggLoss: True                          	[default: False]
                 visualize: False                         
                 where_add: AdaIN                         
 ----------------- End -------------------

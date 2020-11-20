@@ -293,7 +293,7 @@ class D_NLayersMulti(nn.Module):
         mean = mean / self.num_D * 1.0
         return result, mean
 
-
+# TODO: it's ok to set this as -SSIM_loss
 class SSIM_loss(SSIM):
     def forward(self, img1, img2):
         return 100 * (1 - super(SSIM_loss, self).forward(img1, img2))
@@ -313,7 +313,6 @@ class GANLoss(nn.Module):
         self.fake_label_tensor = None
         self.zero_tensor = None
         self.Tensor = torch.FloatTensor
-        self.gan_mode = gan_mode
         # self.register_buffer('real_label', torch.tensor(target_real_label))
         # self.register_buffer('fake_label', torch.tensor(target_fake_label))
         # self.loss = nn.MSELoss() if mse_loss else nn.BCELoss
@@ -486,8 +485,6 @@ class E_ResNet(nn.Module):
         return output
 
 
-
-
 class RGBBlock(nn.Module):
     def __init__(self, nz, input_channel, upsample):
         super(RGBBlock, self).__init__()
@@ -612,6 +609,7 @@ class Progressive_generator(nn.Module):
 
 
 class ApplyNoise(nn.Module):
+    """Add noise. Noise is per pixel (constant over channels) with per-channel weight."""
     def __init__(self, channels):
         super(ApplyNoise, self).__init__()
         self.weight = nn.Parameter(torch.zeros(channels))
@@ -623,6 +621,7 @@ class ApplyNoise(nn.Module):
 
 
 class LayerEpilogue(nn.Module):
+    """Things to do at the end of layer."""
     def __init__(self,
                  channels,
                  dlatent_size,
@@ -637,7 +636,6 @@ class LayerEpilogue(nn.Module):
             self.noise = None
 
         self.linear = nn.Linear(dlatent_size, channels * 2)
-        # self.style_mod = ApplyStyle(dlatent_size, channels, use_wscale=use_wscale)
 
     def forward(self, x, z):
         style = self.linear(z)  # style => [batch_size, n_channels*2]
@@ -648,4 +646,8 @@ class LayerEpilogue(nn.Module):
 
         return x
 
+
+
+if __name__ == "__main__":
+    pass
 

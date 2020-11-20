@@ -60,7 +60,7 @@ class CustomDatasetDataLoader(BaseDataLoader):
     def initialize(self, opt):
         BaseDataLoader.initialize(self, opt)
         self.dataset = create_dataset(opt)
-        torch.multiprocessing.set_start_method('spawn')
+        torch.multiprocessing.set_start_method('spawn', force=True)     
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size=opt.batch_size,

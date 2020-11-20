@@ -8,11 +8,13 @@ from PIL import Image
 from . import html
 from . import util
 
+import pdb
 
 # save image to the disk
 def save_images(webpage, images, names, image_path, aspect_ratio=1.0, width=256):
-    image_dir = webpage.get_image_dir()
-    name = ntpath.basename(image_path)
+    # image_dir = webpage.get_image_dir()
+    # name = ntpath.basename(image_path)
+    name = ntpath.basename(image_path).split('.')[0]
 
     webpage.add_header(name)
     ims, txts, links = [], [], []
@@ -20,7 +22,9 @@ def save_images(webpage, images, names, image_path, aspect_ratio=1.0, width=256)
     for label, im_data in zip(names, images):
         im = util.tensor2im(im_data)
         image_name = '%s_%s.png' % (name, label)
-        save_path = os.path.join(image_dir, image_name)
+        # save_path = os.path.join(image_dir, image_name)
+        save_path = os.path.join(os.path.dirname(image_path), image_name)
+
         h, w, _ = im.shape
         if aspect_ratio > 1.0:
             im = Image.fromarray(im, (h, int(w * aspect_ratio)), interp='bicubic')

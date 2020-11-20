@@ -6,7 +6,7 @@ class TestOptions(BaseOptions):
         BaseOptions.initialize(self, parser)
         parser.add_argument('--results_dir', type=str, default='../results/', help='saves results here.')
         parser.add_argument('--phase', type=str, default='test', help='train, val, test, etc')
-        parser.add_argument('--num_test', type=int, default=50, help='how many test images to run')
+        parser.add_argument('--num_test', type=int, default=50, help='how many test images to run. -1 means test all images.')
         parser.add_argument('--n_samples', type=int, default=5, help='#samples')
         parser.add_argument('--no_encode', action='store_true', help='do not produce encoded image')
         parser.add_argument('--test_psnr', action='store_true', help='test the quality of encoded image by psnr')

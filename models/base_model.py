@@ -45,6 +45,8 @@ class BaseModel():
         if net is not None:
             for param in net.parameters():
                 param.requires_grad = requires_grad  # to avoid computation
+        else:
+            raise ValueError("net must be nonempty")
 
     # used in test time, wrapping `forward` in no_grad() so we don't save
     # intermediate steps for backprop
@@ -66,14 +68,12 @@ class BaseModel():
 
         lr = self.optimizers[0].param_groups[0]['lr']
         if not self.opt.no_TTUR:
-            new_lr_G = lr / 2
+            new_lr_EG = lr / 2
             new_lr_D = lr * 2
             for param_group in self.optimizer_D.param_groups:
                 param_group['lr'] = new_lr_D
-            for param_group in self.optimizer_G.param_groups:
-                param_group['lr'] = new_lr_G
-            for param_group in self.optimizer_E.param_groups:
-                param_group['lr'] = new_lr_G
+            for param_group in self.optimizer_EG.param_groups:
+                param_group['lr'] = new_lr_EG
         print('learning rate = %.7f' % lr)
 
     # return visualization images. train.py will display these images, and save the images to a html

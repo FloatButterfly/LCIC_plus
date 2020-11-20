@@ -12,15 +12,18 @@ import numpy as np
 import pdb
 
 
-def test(model, val_dataset):
+def test(model, val_dataset, num=1000):
     model.eval()
     cur_score = 0.0
     with torch.no_grad():
         for i, images in enumerate(val_dataset):
             model.set_input(images)
             real_A, fake_B, real_B = model.test(encode=True)
-            cur_score += ssim(fake_B, real_B, val_range=1.0)
-        cur_score /= len(val_dataset)
+            # cur_score += ssim(fake_B, real_B, val_range=1.0)
+            cur_score += ssim(fake_B, real_B)
+            if i + 1 == num:
+                break
+        cur_score /= min(num, len(val_dataset))
     return cur_score
 
 
@@ -52,7 +55,7 @@ if __name__ == '__main__':
         iter_data_time = time.time()
         epoch_iter = 0
         t_data = 0
-
+ 
         for i, data in enumerate(dataset):
             iter_start_time = time.time()
             if total_steps % opt.print_freq == 0:
@@ -83,8 +86,10 @@ if __name__ == '__main__':
                       (epoch, total_steps))
                 model.save_networks('latest')
                 # ========== Validation ========
-                print('Validation with ssim..')
-                cur_score = test(model, val_dataset)
+                print(f'Validation with ssim.. validation num : {opt.num_val}')
+                val_start_time = time.time()
+                cur_score = test(model, val_dataset, opt.num_val)
+                print(f'Test costs time: {time.time() - val_start_time} s')
                 print(" ssim = %.6f" % cur_score)
                 with open(log_dir, 'a') as log_file:
                     log_file.write("ssim value of epoch %d is %.6f \n" % (epoch, cur_score))

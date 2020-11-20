@@ -1,3 +1,4 @@
+from models.edge_model import edgeModel
 import os.path
 import os
 import random
@@ -13,7 +14,8 @@ from data.image_folder import make_dataset
 
 import sys
 sys.path.insert(0, "..")
-from edge_detection.DexiNed.DexiNed_Pytorch.model import DexiNet
+# from edge_detection.DexiNed.DexiNed_Pytorch.model import DexiNet
+from models import edge_model
 
 import pdb
 
@@ -76,8 +78,8 @@ class AlignedDataset(BaseDataset):
                 tmp = B[0, ...] * 0.299 + B[1, ...] * 0.587 + B[2, ...] * 0.114
                 B = tmp.unsqueeze(0)
             
-            print("A shape final:", A.shape)
-            print("B shape final:", B.shape)
+            # print("A shape final:", A.shape)
+            # print("B shape final:", B.shape)
 
             return {'A': A, 'B': B,
                     'A_paths': AB_path, 'B_paths': AB_path}
@@ -98,10 +100,10 @@ class AlignedDataset(BaseDataset):
             if not os.path.isfile(checkpoint_path):
                 raise FileNotFoundError(
                     f"Checkpoint filte note found: {checkpoint_path}")
-            print(f"Restoring DexiNed weights from: {checkpoint_path}")
+            # print(f"Restoring DexiNed weights from: {checkpoint_path}")
 
             device = torch.device('cuda' if len(self.opt.gpu_ids) > 0 else 'cpu')
-            edge_model = DexiNet().to(device)
+            edge_model = edgeModel().to(device)
 
             edge_model.load_state_dict(torch.load(checkpoint_path,
                                             map_location=device))
@@ -119,7 +121,7 @@ class AlignedDataset(BaseDataset):
             #     print("actual size: {}, target size: {}".format(B_shape, (B_width, B_height)))
             
             mean_pixel_values = [103.939,116.779,123.68]
-            print("mean pixel values: {}".format(mean_pixel_values))
+            # print("mean pixel values: {}".format(mean_pixel_values))
 
             B_input = np.array(B, dtype=np.float32).copy()
             B_input -= mean_pixel_values
@@ -130,14 +132,20 @@ class AlignedDataset(BaseDataset):
                 B_input = B_input.to(device)
                 B_output = edge_model(torch.unsqueeze(B_input, dim=0))
 
-            fuse, _ = self._save_output(B_output, file_name, B_shape, save=True)
-            A = transforms.ToTensor()(fuse.copy()).to(device)
+            fuse, avg = self._save_output(B_output, file_name, B_shape, save=False)
             
+            if self.opt.edge_mode == 'average':
+                A = transforms.ToTensor()(avg.copy()).to(device)
+            elif self.opt.edge_mode == 'fuse':
+                A = transforms.ToTensor()(fuse.copy()).to(device)
+            else:
+                raise ValueError('Unknown edge mode: {}'.format(self.opt.edge_mode))
+
             B = B[:, :, [2, 1, 0]]          # to RGB
             B = transforms.ToTensor()(B).to(device)
 
-            print("A shape: {}".format(A.shape))
-            print("B shape: {}".format(B.shape))
+            # print("A shape: {}".format(A.shape))
+            # print("B shape: {}".format(B.shape))
 
             A = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(A)
             B = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(B)
@@ -169,7 +177,7 @@ class AlignedDataset(BaseDataset):
                 tmp = B[0, ...] * 0.299 + B[1, ...] * 0.587 + B[2, ...] * 0.114
                 B = tmp.unsqueeze(0)
             
-            return {'A': A, 'B': B, 'A_paths': "", "B_paths": ""}
+            return {'A': A, 'B': B, 'A_paths': AB_path, "B_paths": AB_path}
 
 
     def __len__(self):
@@ -179,7 +187,10 @@ class AlignedDataset(BaseDataset):
         return 'AlignedDataset'
 
     def _save_output(self, tensor, file_names, img_shape=None, save=False):
-        output_dir = os.path.join(self.opt.results_dir, 'edge_maps')
+        if self.opt.phase == 'train':
+            output_dir = os.path.join(self.opt.checkpoints_dir, self.opt.name, 'edge_maps')
+        elif self.opt.phase == 'test':
+            output_dir = os.path.join(self.opt.results_dir, 'edge_maps')
         
         # 255.0 * (1.0 - em_a)
         edge_maps = []
@@ -192,7 +203,7 @@ class AlignedDataset(BaseDataset):
         image_shape = [np.array([x]) for x in image_shape]
         # (H, W) -> (W, H)
         image_shape =[[y, x] for x, y in zip(image_shape[0], image_shape[1])]
-        print("image_shape:{}".format(image_shape))
+        # print("image_shape:{}".format(image_shape))
         
         idx = 0
         for i_shape, file_name in zip(image_shape, file_names):
@@ -220,7 +231,7 @@ class AlignedDataset(BaseDataset):
             average = np.array(preds, dtype=np.float32)
             average = np.uint8(np.mean(average, axis=0))
             
-            print("average shape:", average.shape)
+            # print("average shape:", average.shape)
             if save:
                 fuse_dir = os.path.join(output_dir, 'fuse')
                 if not os.path.exists(fuse_dir):
