@@ -293,7 +293,6 @@ class D_NLayersMulti(nn.Module):
         mean = mean / self.num_D * 1.0
         return result, mean
 
-# TODO: it's ok to set this as -SSIM_loss
 class SSIM_loss(SSIM):
     def forward(self, img1, img2):
         return 100 * (1 - super(SSIM_loss, self).forward(img1, img2))
