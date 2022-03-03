@@ -1,5 +1,5 @@
-# LCIC-plus
-The extented code of layered conceptual image compression. Journal version under review. The paper address is <a href="https://arxiv.org/pdf/2011.04976.pdf">Conceptual Compression via Deep Structure and
+# Conceptual Compression via Deep Structure and Texture Synthesis
+The codes of paper "Conceptual Compression via Deep Structure and Texture Synthesis", which is accepted by Transactions on Image Processing. The paper address is <a href="https://arxiv.org/pdf/2011.04976.pdf">Conceptual Compression via Deep Structure and
 Texture Synthesis
 </a>.
 
