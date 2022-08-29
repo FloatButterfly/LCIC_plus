@@ -6,11 +6,14 @@ Texture Synthesis
 ## Citation
 If you find it useful for your research, please cite as following:
 
->@article{chang2020conceptual,
+>@article{chang2022conceptual,
   title={Conceptual compression via deep structure and texture synthesis},
-  author={Chang, Jianhui and Zhao, Zhenghui and Jia, Chuanmin and Wang, Shiqi and Yang, Lingbo and Zhang, Jian and Ma, Siwei},
-  journal={arXiv preprint arXiv:2011.04976},
-  year={2020}
+  author={Chang, Jianhui and Zhao, Zhenghui and Jia, Chuanmin and Wang, Shiqi and Yang, Lingbo and Mao, Qi and Zhang, Jian and Ma, Siwei},
+  journal={IEEE Transactions on Image Processing},
+  volume={31},
+  pages={2809--2823},
+  year={2022},
+  publisher={IEEE}s
 }
  
 ## Pretrained models 
